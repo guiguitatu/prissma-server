@@ -1,15 +1,15 @@
 security:
   jwt:
-    secret: prissma-secret-key-change-in-production
-    expiration: 86400000
+    secret: ${JWT_SECRET:prissma-secret-key-change-in-production}
+    expiration: ${JWT_EXPIRATION:86400000}
   password-reset:
-    frontend-url: http://localhost:3000
+    frontend-url: ${PASSWORD_RESET_FRONTEND_URL:http://localhost:3000}
 
 app:
   admin:
-    email: admin@prissma.com
-    password: Admin@123
-    name: Admin
+    email: ${APP_ADMIN_EMAIL:admin@prissma.com}
+    password: ${APP_ADMIN_PASSWORD:Admin@123}
+    name: ${APP_ADMIN_NAME:Admin}
   storage:
     backend: local
     local:
@@ -26,6 +26,11 @@ app:
         - image/webp
         - application/vnd.openxmlformats-officedocument.wordprocessingml.document
 
+database:
+  # Aceita diretamente a connection string entregue pelo Neon:
+  # postgresql://USUARIO:SENHA@HOST/BANCO?sslmode=require&channel_binding=require
+  url: ${DATABASE_URL:postgresql://prissma:prissma@localhost:5432/prissma}
+
 openai:
   image:
     # Nunca versione uma chave real. Defina OPENAI_API_KEY no ambiente.
@@ -34,13 +39,12 @@ openai:
     model: ${OPENAI_IMAGE_MODEL:gpt-image-2}
     max-input-bytes: ${OPENAI_IMAGE_MAX_INPUT_BYTES:20971520}
 
+server:
+  port: ${PORT:8080}
+
 spring:
   application:
     name: prissma-server
-  datasource:
-    url: jdbc:postgresql://localhost:5432/prissma
-    username: prissma
-    password: prissma
   jpa:
     hibernate:
       ddl-auto: validate
@@ -54,10 +58,10 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: prissma.noreply@gmail.com
-    password: bdhvdckymwzfqezp
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
