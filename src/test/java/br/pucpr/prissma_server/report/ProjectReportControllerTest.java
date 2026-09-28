@@ -1,6 +1,6 @@
 package br.pucpr.prissma_server.report;
 
-import br.pucpr.prissma_server.TestcontainersConfig;
+import br.pucpr.prissma_server.EmbeddedPostgresConfig;
 import br.pucpr.prissma_server.projects.ConstructionProject;
 import br.pucpr.prissma_server.projects.ConstructionProjectMember;
 import br.pucpr.prissma_server.projects.ConstructionProjectMemberRepository;
@@ -55,7 +55,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-@Import(TestcontainersConfig.class)
+@Import(EmbeddedPostgresConfig.class)
 @DisplayName("ProjectReportController Integration Tests")
 class ProjectReportControllerTest {
 

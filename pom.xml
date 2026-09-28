@@ -31,6 +31,25 @@
 		<thymeleaf.version>3.1.5.RELEASE</thymeleaf.version>
 		<tomcat.version>10.1.59</tomcat.version>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<!--
+				Fixa a versao dos binarios do PostgreSQL embarcado em 17.4, para
+				bater com o postgres:17 do docker-compose e com o Neon. Sem este
+				import, o zonky usaria a versao default dele, que pode ser mais
+				antiga do que o banco de producao.
+			-->
+			<dependency>
+				<groupId>io.zonky.test.postgres</groupId>
+				<artifactId>embedded-postgres-binaries-bom</artifactId>
+				<version>17.4.0</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -125,19 +144,42 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!--
+			PostgreSQL real nos testes, sem Docker.
+
+			O Testcontainers foi removido porque exige um daemon Docker, que nao
+			existe em toda maquina de dev (Windows corporativo depende de WSL2 e
+			de licenca do Docker Desktop). Sem daemon, a suite inteira morria com
+			"Could not find a valid Docker environment".
+
+			O zonky sobe os binarios oficiais do PostgreSQL como processo nativo.
+			E o mesmo motor de producao, entao as migrations validadas aqui sao
+			as mesmas que rodam no Neon. O H2 nao serve: nao roda as migrations.
+		-->
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-testcontainers</artifactId>
+			<groupId>io.zonky.test</groupId>
+			<artifactId>embedded-postgres</artifactId>
+			<version>2.0.7</version>
 			<scope>test</scope>
 		</dependency>
+		<!--
+			O embedded-postgres traz por padrao apenas os binarios de Linux e
+			de Mac Intel. Esta dependencia garante o executavel de Windows; a
+			versao vem do BOM importado em dependencyManagement.
+		-->
 		<dependency>
-			<groupId>org.testcontainers</groupId>
-			<artifactId>junit-jupiter</artifactId>
+			<groupId>io.zonky.test.postgres</groupId>
+			<artifactId>embedded-postgres-binaries-windows-amd64</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!--
+			Macs com Apple Silicon: o embedded-postgres declara apenas o
+			binario darwin-amd64 (Intel). Linux amd64, usado pelo CI, ja
+			vem por padrao.
+		-->
 		<dependency>
-			<groupId>org.testcontainers</groupId>
-			<artifactId>postgresql</artifactId>
+			<groupId>io.zonky.test.postgres</groupId>
+			<artifactId>embedded-postgres-binaries-darwin-arm64v8</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

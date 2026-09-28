@@ -44,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-@Import(TestcontainersConfig.class)
+@Import(EmbeddedPostgresConfig.class)
 @DisplayName("Resource isolation: non-member cannot reach another user's project resources")
 public class ResourceIsolationTest {
 

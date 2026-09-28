@@ -6,7 +6,7 @@ security:
     frontend-url: http://localhost:3000
 
 spring:
-  # Datasource vem do Testcontainers (@ServiceConnection em TestcontainersConfig):
+  # Datasource vem do EmbeddedPostgresConfig: um PostgreSQL 17 real por suite,
   # um Postgres 17 real por suíte, com as migrations Flyway reais — o H2 foi
   # removido porque nunca conseguiu rodá-las (V2 falha em TIMESTAMPTZ).
   jpa:
