@@ -21,19 +21,16 @@ services:
     build: .
     ports:
       - "8080:8080"
-    # O container nao enxerga o .env da raiz sozinho. Sem isto a OPENAI_API_KEY
-    # chega vazia e so a geracao de imagens falha — o app sobe normalmente, o
-    # que torna o problema silencioso ate alguem clicar em "Previa visual IA".
+    # O container nao enxerga o .env da raiz sozinho. O env_file injeta as
+    # demais variaveis locais sem versionar credenciais no docker-compose.
     env_file:
       - .env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/prissma
-      SPRING_DATASOURCE_USERNAME: prissma
-      SPRING_DATASOURCE_PASSWORD: prissma
+      # Uma unica URL carrega host, banco, usuario e senha.
+      # Em Cloud Run, defina DATABASE_URL com a string entregue pelo Neon.
+      DATABASE_URL: postgresql://prissma:prissma@db:5432/prissma
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
-      SPRING_MAIL_USERNAME: prissma.noreply2@gmail.com
-      SPRING_MAIL_PASSWORD: tcyl bnki tovb nsex
 
     depends_on:
       db:
