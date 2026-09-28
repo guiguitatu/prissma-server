@@ -8,6 +8,7 @@ public record DayScheduleResponse(
         LocalDate date,
         BigDecimal allocatedHours,
         boolean allocated,
+        boolean overlapped,
         List<ScheduledTaskResponse> tasks
 ) {
 }

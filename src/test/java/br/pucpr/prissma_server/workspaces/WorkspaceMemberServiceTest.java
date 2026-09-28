@@ -74,8 +74,15 @@ class WorkspaceMemberServiceTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        service = new WorkspaceMemberService(workspaceRepository, memberRepository, inviteRepository,
-                userRepository, userValidator, passwordEncoder, eventPublisher, notificationService,
+        service = new WorkspaceMemberService(
+                workspaceRepository,
+                memberRepository,
+                inviteRepository,
+                userRepository,
+                userValidator,
+                passwordEncoder,
+                eventPublisher,
+                notificationService,
                 "http://localhost:3000");
 
         workspace = new Workspace();
@@ -95,15 +102,15 @@ class WorkspaceMemberServiceTest {
     }
 
     private WorkspaceMember memberRow(Long id, Long userId, WorkspaceRole role) throws Exception {
-        WorkspaceMember m = new WorkspaceMember();
+        WorkspaceMember member = new WorkspaceMember();
         var idField = WorkspaceMember.class.getDeclaredField("id");
         idField.setAccessible(true);
-        idField.set(m, id);
-        m.setWorkspace(workspace);
-        m.setUserId(userId);
-        m.setRole(role);
-        m.setActive(true);
-        return m;
+        idField.set(member, id);
+        member.setWorkspace(workspace);
+        member.setUserId(userId);
+        member.setRole(role);
+        member.setActive(true);
+        return member;
     }
 
     // ---------- convite ----------
@@ -254,11 +261,11 @@ class WorkspaceMemberServiceTest {
         when(userRepository.findByEmail("nova@obra.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("Senha@123")).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenAnswer(inv -> {
-            User u = inv.getArgument(0);
+            User user = inv.getArgument(0);
             var idField = User.class.getDeclaredField("id");
             idField.setAccessible(true);
-            idField.set(u, 77L);
-            return u;
+            idField.set(user, 77L);
+            return user;
         });
         when(memberRepository.findByWorkspaceIdAndUserIdAndDeletedAtIsNull(WS_ID, 77L))
                 .thenReturn(Optional.empty());

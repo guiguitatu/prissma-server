@@ -24,6 +24,16 @@ public enum ScheduleView {
                 : reference.with(TemporalAdjusters.lastDayOfMonth());
     }
 
+    /** Data de referência do período anterior, para o front navegar sem calcular datas. */
+    public LocalDate previousOf(LocalDate startDate) {
+        return this == WEEK ? startDate.minusWeeks(1) : startDate.minusMonths(1);
+    }
+
+    /** Data de referência do próximo período. */
+    public LocalDate nextOf(LocalDate startDate) {
+        return this == WEEK ? startDate.plusWeeks(1) : startDate.plusMonths(1);
+    }
+
     public static ScheduleView fromString(String value) {
         if (value == null || value.isBlank()) {
             return WEEK;

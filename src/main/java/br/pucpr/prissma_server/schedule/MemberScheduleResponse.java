@@ -9,6 +9,7 @@ public record MemberScheduleResponse(
         String roleInProject,
         String userResponsibility,
         BigDecimal totalAllocatedHours,
+        boolean hasOverlap,
         List<DayScheduleResponse> days
 ) {
 }

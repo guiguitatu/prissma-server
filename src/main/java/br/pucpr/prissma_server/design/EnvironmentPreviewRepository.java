@@ -25,4 +25,11 @@ public interface EnvironmentPreviewRepository extends JpaRepository<EnvironmentP
     @Query("SELECT p.floorPlanKey FROM EnvironmentPreview p "
             + "WHERE p.proposal.id = :proposalId AND p.floorPlanKey IS NOT NULL")
     List<String> findFloorPlanKeysByProposal(@Param("proposalId") Long proposalId);
+
+    /**
+     * Mesmo motivo do {@code DesignSubmissionRepository#deleteByProposalId}: as
+     * previas precisam sair pelo persistence context, senao sobram gerenciadas
+     * apontando para uma proposta ja removida e o flush do commit quebra.
+     */
+    void deleteByProposalId(Long proposalId);
 }

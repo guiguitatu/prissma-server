@@ -1,4 +1,4 @@
-security:
+﻿security:
   jwt:
     secret: ${JWT_SECRET:prissma-secret-key-change-in-production}
     expiration: ${JWT_EXPIRATION:86400000}
@@ -72,3 +72,10 @@ spring:
 springdoc:
   swagger-ui:
     path: /
+
+# O Azure App Service (Linux, Java SE) injeta a porta em PORT e espera que a
+# aplicacao escute exatamente nela; o 8080 fixo do Spring Boot faz o health
+# check falhar e o container reiniciar em loop. O default mantem o
+# comportamento local intacto quando a variavel nao existe.
+server:
+  port: ${PORT:8080}

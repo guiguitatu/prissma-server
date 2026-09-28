@@ -8,6 +8,8 @@ public record TeamScheduleResponse(
         ScheduleView view,
         LocalDate startDate,
         LocalDate endDate,
+        LocalDate previousDate,
+        LocalDate nextDate,
         List<LocalDate> days,
         List<MemberScheduleResponse> members
 ) {

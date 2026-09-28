@@ -2,6 +2,7 @@ package br.pucpr.prissma_server.users;
 
 import br.pucpr.prissma_server.task.TaskResponse;
 import br.pucpr.prissma_server.task.TaskService;
+import br.pucpr.prissma_server.notifications.NotificationService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,13 @@ class UserControllerTest {
     @MockitoBean
     private TaskService taskService;
 
+    // O UserController recebe o NotificationService no construtor. Num
+    // @WebMvcTest so os beans do slice web sao criados, entao sem este mock o
+    // contexto nem sobe: falha com NoSuchBeanDefinitionException antes de
+    // executar qualquer teste.
+    @MockitoBean
+    private NotificationService notificationService;
+
     private UsernamePasswordAuthenticationToken auth() {
         return new UsernamePasswordAuthenticationToken(10L, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
     }
@@ -82,4 +90,3 @@ class UserControllerTest {
                 .andExpect(jsonPath("$[0].status").value("TODO"));
     }
 }
-

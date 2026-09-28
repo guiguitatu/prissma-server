@@ -199,6 +199,20 @@ public class DesignProposalService {
         keys.addAll(previewRepository.findRawImageKeysByProposal(proposalId));
         keys.addAll(previewRepository.findFloorPlanKeysByProposal(proposalId));
 
+        // As filhas saem explicitamente, e antes da proposta.
+        //
+        // So as projecoes acima nao bastam: basta uma versao ou previa ter sido
+        // carregada em qualquer ponto da MESMA transacao (o POST que criou a
+        // proposta, por exemplo) para ela continuar gerenciada apontando para a
+        // proposta que o delete abaixo marca para remocao. No flush do commit o
+        // Hibernate encontra essa referencia e estoura TransientObjectException.
+        //
+        // O derived delete do Spring Data faz SELECT + remove por entidade, entao
+        // o persistence context fica coerente — coisa que um DELETE em massa
+        // (@Modifying) nao faria, por passar por fora dele.
+        submissionRepository.deleteByProposalId(proposalId);
+        previewRepository.deleteByProposalId(proposalId);
+
         proposalRepository.delete(proposal);
 
         // Depois do delete: se ele falhar, a transação volta atrás e os arquivos

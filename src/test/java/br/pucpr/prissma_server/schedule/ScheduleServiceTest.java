@@ -148,6 +148,8 @@ class ScheduleServiceTest {
         assertEquals(MONDAY, response.startDate());
         assertEquals(SUNDAY, response.endDate());
         assertEquals(7, response.days().size());
+        assertEquals(MONDAY.minusWeeks(1), response.previousDate());
+        assertEquals(MONDAY.plusWeeks(1), response.nextDate());
 
         assertEquals(1, response.members().size(), "membro inativo nao aparece");
         MemberScheduleResponse row = response.members().get(0);
@@ -185,7 +187,48 @@ class ScheduleServiceTest {
         assertEquals(LocalDate.of(2026, 2, 1), response.startDate());
         assertEquals(LocalDate.of(2026, 2, 28), response.endDate());
         assertEquals(28, response.days().size());
+        assertEquals(LocalDate.of(2026, 1, 1), response.previousDate());
+        assertEquals(LocalDate.of(2026, 3, 1), response.nextDate());
         verify(allocationRepository).findByProjectInPeriod(PROJECT_ID, response.startDate(), response.endDate());
+    }
+
+    @Test
+    @DisplayName("Dia com mais de uma tarefa do mesmo integrante deve vir sobreposto")
+    void getMarksOverlappedDays() {
+        when(projectRepository.findById(PROJECT_ID)).thenReturn(Optional.of(project));
+        when(memberRepository.findAllByConstructionProjectIdOrderByJoinedAtAscIdAsc(PROJECT_ID))
+                .thenReturn(List.of(member(joao, "ACTIVE")));
+
+        Task running = task("Alvenaria", joao, MONDAY, MONDAY.plusDays(1));
+        Task added = task("Reboco", joao, MONDAY.plusDays(1), MONDAY.plusDays(1));
+        when(taskRepository.findAssignedInProjectDuringPeriod(PROJECT_ID, MONDAY, SUNDAY))
+                .thenReturn(List.of(running, added));
+
+        TeamScheduleResponse response = service.getSchedule(PROJECT_ID, "WEEK", MONDAY.toString(), ACTOR_ID);
+
+        MemberScheduleResponse row = response.members().get(0);
+        assertTrue(row.hasOverlap());
+        assertFalse(row.days().get(0).overlapped(), "segunda tem so uma tarefa");
+        assertTrue(row.days().get(1).overlapped(), "terca tem duas tarefas");
+        assertEquals(2, row.days().get(1).tasks().size());
+        assertFalse(row.days().get(2).overlapped());
+    }
+
+    @Test
+    @DisplayName("Integrante sem sobreposicao deve vir com hasOverlap false")
+    void getWithoutOverlapKeepsFlagFalse() {
+        when(projectRepository.findById(PROJECT_ID)).thenReturn(Optional.of(project));
+        when(memberRepository.findAllByConstructionProjectIdOrderByJoinedAtAscIdAsc(PROJECT_ID))
+                .thenReturn(List.of(member(joao, "ACTIVE")));
+
+        when(taskRepository.findAssignedInProjectDuringPeriod(PROJECT_ID, MONDAY, SUNDAY))
+                .thenReturn(List.of(task("Alvenaria", joao, MONDAY, MONDAY.plusDays(2))));
+
+        TeamScheduleResponse response = service.getSchedule(PROJECT_ID, "WEEK", MONDAY.toString(), ACTOR_ID);
+
+        MemberScheduleResponse row = response.members().get(0);
+        assertFalse(row.hasOverlap());
+        assertTrue(row.days().stream().noneMatch(DayScheduleResponse::overlapped));
     }
 
     @Test

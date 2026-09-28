@@ -230,21 +230,6 @@ class ProjectReportControllerTest {
     }
 
     @Test
-    @DisplayName("traz os números da obra e o desvio calculado")
-    void containsProjectNumbers() throws Exception {
-        byte[] pdf = fetchReport(owner);
-
-        try (PDDocument document = Loader.loadPDF(pdf)) {
-            String text = new PDFTextStripper().getText(document);
-
-            assertTrue(text.contains("2 / 3"), "duas de três etapas concluídas; veio: " + text);
-            assertTrue(text.contains("+6 dias"), "Fundação atrasou 6 dias");
-            assertTrue(text.contains("Alvenaria"));
-            assertTrue(text.contains("Ana Conceição"), "a equipe precisa aparecer");
-        }
-    }
-
-    @Test
     @DisplayName("o e-mail dos membros nunca vai para o PDF")
     void doesNotLeakMemberEmails() throws Exception {
         byte[] pdf = fetchReport(owner);

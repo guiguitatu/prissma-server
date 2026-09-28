@@ -89,6 +89,7 @@ public class ScheduleService {
             List<Task> userTasks = tasksByUser.getOrDefault(user.getId(), List.of());
 
             BigDecimal total = BigDecimal.ZERO;
+            boolean hasOverlap = false;
             List<DayScheduleResponse> daySchedules = new ArrayList<>(days.size());
             for (LocalDate day : days) {
                 BigDecimal hours = hoursByDate.getOrDefault(day, BigDecimal.ZERO);
@@ -97,7 +98,10 @@ public class ScheduleService {
                         .filter(task -> coversDate(task, day))
                         .map(ScheduledTaskResponse::from)
                         .toList();
-                daySchedules.add(new DayScheduleResponse(day, hours, hours.signum() > 0, dayTasks));
+                // Sobreposição: mais de uma tarefa do mesmo integrante no mesmo dia.
+                boolean overlapped = dayTasks.size() > 1;
+                hasOverlap = hasOverlap || overlapped;
+                daySchedules.add(new DayScheduleResponse(day, hours, hours.signum() > 0, overlapped, dayTasks));
             }
 
             memberSchedules.add(new MemberScheduleResponse(
@@ -106,11 +110,13 @@ public class ScheduleService {
                     member.getRoleInProject(),
                     responsibilities.get(user.getId()),
                     total,
+                    hasOverlap,
                     daySchedules
             ));
         }
 
-        return new TeamScheduleResponse(projectId, scheduleView, startDate, endDate, days, memberSchedules);
+        return new TeamScheduleResponse(projectId, scheduleView, startDate, endDate,
+                scheduleView.previousOf(startDate), scheduleView.nextOf(startDate), days, memberSchedules);
     }
 
     @Transactional
