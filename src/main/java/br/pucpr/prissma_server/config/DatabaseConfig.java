@@ -13,7 +13,7 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 @Configuration
-@Profile("!test")
+@Profile("!test & !local")
 public class DatabaseConfig {
 
     @Bean

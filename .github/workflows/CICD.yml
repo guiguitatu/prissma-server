@@ -1,4 +1,5 @@
-name: Build and deploy JAR app to Azure Web App - testjavawebapp
+name: CI/CD - Deploy to Google Cloud Run
+
 on:
   push:
     branches:
@@ -11,7 +12,7 @@ env:
   CLOUD_RUN_SERVICE: prissma-server
 
 jobs:
-  CI:
+  test-and-deploy:
     runs-on: ubuntu-latest
 
     permissions:
@@ -30,41 +31,30 @@ jobs:
 
       - name: Grant execute permission for mvnw
         run: chmod +x mvnw
-      - name: Build with Maven Wrapper
-        run: ./mvnw -B clean package
-      - name: Locate executable jar
-        id: locate-jar
+
+      - name: Run tests
+        run: ./mvnw -B clean test
+
+      # Configure este secret em:
+      # GitHub -> Settings -> Secrets and variables -> Actions
+      # Nome: GCP_SA_KEY
+      # Valor: JSON da service account usada para fazer deploy no Cloud Run.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Deploy source to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          region: ${{ env.GCP_REGION }}
+          service: ${{ env.CLOUD_RUN_SERVICE }}
+          source: .
+          env_vars_update_strategy: merge
+
+      - name: Show deployed URL
         run: |
-          JAR_PATH=$(find target -maxdepth 1 -name '*.jar' ! -name '*.jar.original' | head -n 1)
-          if [ -z "$JAR_PATH" ]; then
-            echo "::error::No runnable jar found in target/"
-            exit 1
-          fi
-          echo "Found jar: $JAR_PATH"
-          # O App Service (Java SE) espera o artefato como app.jar em
-          # /home/site/wwwroot. Publicar com o nome versionado obriga a repetir a
-          # versao no Startup Command do portal, e qualquer bump de versao no pom
-          # quebra o boot com "Unable to access jarfile".
-          cp "$JAR_PATH" app.jar
-          ls -la app.jar
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: java-app
-          path: app.jar
-  CD:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: java-app
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'testjavawebapp'
-          slot-name: 'Production'
-          package: 'app.jar'
-          publish-profile: ${{ secrets.publish_profile }}
+          echo "Cloud Run URL: ${{ steps.deploy.outputs.url }}"
