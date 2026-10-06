@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - development
+      - release
+  pull_request:
+    branches:
+      - development
+      - release
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Grant execute permission for mvnw
+        run: chmod +x mvnw
+
+      - name: Run tests
+        run: ./mvnw -B clean test
