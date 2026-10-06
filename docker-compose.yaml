@@ -31,6 +31,10 @@ services:
       DATABASE_URL: postgresql://prissma:prissma@db:5432/prissma
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      # Vazio por padrao. SPRING_PROFILES_ACTIVE=seed popula dados de demonstracao.
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
+      SPRING_MAIL_USERNAME: prissma.noreply2@gmail.com
+      SPRING_MAIL_PASSWORD: tcyl bnki tovb nsex
 
     depends_on:
       db:
