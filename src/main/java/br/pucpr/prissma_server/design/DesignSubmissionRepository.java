@@ -36,4 +36,18 @@ public interface DesignSubmissionRepository extends JpaRepository<DesignSubmissi
     @Query("SELECT s.fileUrl FROM DesignSubmission s "
             + "WHERE s.proposal.id = :proposalId AND s.fileUrl IS NOT NULL")
     List<String> findFileUrlsByProposal(@Param("proposalId") Long proposalId);
+
+    /**
+     * Remove as versoes da proposta ANTES de a proposta sair.
+     *
+     * Precisa ser o derived delete do Spring Data (SELECT + remove por entidade)
+     * e nao um @Modifying com DELETE em massa: o bulk passa por cima do
+     * persistence context, deixando as versoes ainda gerenciadas apontando para
+     * uma proposta removida — que e exatamente o TransientObjectException que
+     * estoura no flush do commit.
+     *
+     * O ON DELETE CASCADE do banco continua valendo como rede de seguranca; isto
+     * aqui existe para o contexto do Hibernate ficar coerente.
+     */
+    void deleteByProposalId(Long proposalId);
 }

@@ -1,5 +1,7 @@
 package br.pucpr.prissma_server.task;
 
+import br.pucpr.prissma_server.notifications.NotificationService;
+import br.pucpr.prissma_server.notifications.NotificationType;
 import br.pucpr.prissma_server.projects.AcompanhamentoResponse;
 import br.pucpr.prissma_server.projects.AcompanhamentoStageResponse;
 import br.pucpr.prissma_server.projects.ConstructionProject;
@@ -37,17 +39,20 @@ public class TaskService {
     private final ConstructionProjectRepository projectRepository;
     private final UserRepository userRepository;
     private final ProjectPermissionService permissionService;
+    private final NotificationService notificationService;
 
     public TaskService(TaskRepository taskRepository,
                        StageRepository stageRepository,
                        ConstructionProjectRepository projectRepository,
                        UserRepository userRepository,
-                       ProjectPermissionService permissionService) {
+                       ProjectPermissionService permissionService,
+                       NotificationService notificationService) {
         this.taskRepository = taskRepository;
         this.stageRepository = stageRepository;
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
         this.permissionService = permissionService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -76,7 +81,13 @@ public class TaskService {
         Instant now = Instant.now();
         task.setCreatedAt(now);
         task.setUpdatedAt(now);
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+
+        // Notifica DEPOIS do save: antes disso a tarefa nao tem id e, se o
+        // insert falhar, a notificacao morre junto no rollback.
+        notifyAssignee(saved, null, actorUserId);
+
+        return TaskMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -146,10 +157,19 @@ public class TaskService {
                 task.setPlannedEndDate(request.getPlannedEndDate());
             }
         }
+
+        // Guardado ANTES de applyAssignee: so o que mudou de dono vira aviso.
+        // Sem isso, qualquer PATCH de prioridade ou data reenviaria "voce
+        // recebeu uma tarefa" para quem ja era o responsavel.
+        Long previousAssigneeId = task.getAssigneeUser() == null ? null : task.getAssigneeUser().getId();
         applyAssignee(task, request);
 
         task.setUpdatedAt(Instant.now());
-        return TaskMapper.toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+
+        notifyAssignee(saved, previousAssigneeId, actorUserId);
+
+        return TaskMapper.toResponse(saved);
     }
 
     @Transactional
@@ -202,6 +222,31 @@ public class TaskService {
                 taskStatusCounts,
                 stageSummaries
         );
+    }
+
+    /**
+     * Avisa o responsavel de que a tarefa e dele.
+     *
+     * Dois casos nao geram nada: tarefa atribuida a um nome avulso (sem
+     * usuario) e quem se atribui a propria tarefa -- a pessoa acabou de fazer
+     * isso, nao precisa que o sistema conte.
+     */
+    private void notifyAssignee(Task task, Long previousAssigneeId, Long actorUserId) {
+        User assignee = task.getAssigneeUser();
+        if (assignee == null) {
+            return;
+        }
+        Long assigneeId = assignee.getId();
+        if (Objects.equals(assigneeId, previousAssigneeId) || Objects.equals(assigneeId, actorUserId)) {
+            return;
+        }
+
+        String projectTitle = task.getStage().getConstructionProject().getTitle();
+        notificationService.notifyUser(
+                assigneeId,
+                NotificationType.TASK_ASSIGNED,
+                "Nova tarefa atribuída a você",
+                "A tarefa \"" + task.getTitle() + "\" da obra \"" + projectTitle + "\" foi atribuída a você.");
     }
 
     /** Leitura de tarefa: basta VIEW_PROJECT (todo papel de obra tem). */
@@ -316,5 +361,4 @@ public class TaskService {
         return counts;
     }
 }
-
 

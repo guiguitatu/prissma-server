@@ -1,5 +1,7 @@
 package br.pucpr.prissma_server.workspaces;
 
+import br.pucpr.prissma_server.notifications.NotificationService;
+import br.pucpr.prissma_server.notifications.NotificationType;
 import br.pucpr.prissma_server.users.Role;
 import br.pucpr.prissma_server.users.User;
 import br.pucpr.prissma_server.users.UserRepository;
@@ -29,16 +31,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Membros e convites do workspace. As regras anti-sonda e de hierarquia vivem
- * AQUI (backend), não só na UI:
- *
- *  - permissão é checada ANTES de validar/olhar o e-mail (senão vira sonda)
- *  - convite para e-mail de staff -> mesmo payload de sucesso, nada persistido
- *  - ADMIN não gerencia outro ADMIN nem o OWNER; ninguém se auto-remove
- *  - desativar toca SÓ workspace_members.is_active — nunca o usuário global
- *  - e-mail sempre trim().toLowerCase(); convite pendente do mesmo e-mail é renovado
- */
 @Service
 public class WorkspaceMemberService {
 
@@ -52,6 +44,7 @@ public class WorkspaceMemberService {
     private final UserValidator userValidator;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationService notificationService;
     private final String frontendUrl;
 
     public WorkspaceMemberService(WorkspaceRepository workspaceRepository,
@@ -61,6 +54,7 @@ public class WorkspaceMemberService {
                                   UserValidator userValidator,
                                   PasswordEncoder passwordEncoder,
                                   ApplicationEventPublisher eventPublisher,
+                                  NotificationService notificationService,
                                   @Value("${security.password-reset.frontend-url}") String frontendUrl) {
         this.workspaceRepository = workspaceRepository;
         this.memberRepository = memberRepository;
@@ -69,6 +63,7 @@ public class WorkspaceMemberService {
         this.userValidator = userValidator;
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
+        this.notificationService = notificationService;
         this.frontendUrl = frontendUrl;
     }
 
@@ -227,6 +222,13 @@ public class WorkspaceMemberService {
         invite.setAccepted(true);
         invite.setUpdatedAt(now);
         inviteRepository.save(invite);
+        
+        notificationService.notifyUser(
+                invite.getInvitedBy(),
+                NotificationType.INVITE_ACCEPTED,
+                "Convite aceito",
+                user.getName() + " aceitou o convite para o workspace \""
+                        + invite.getWorkspace().getName() + "\".");
     }
 
     // ---------- gestão ----------

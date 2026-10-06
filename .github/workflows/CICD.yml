@@ -1,0 +1,60 @@
+name: CI/CD - Deploy to Google Cloud Run
+
+on:
+  push:
+    branches:
+      - release
+  workflow_dispatch:
+
+env:
+  GCP_PROJECT_ID: prissma
+  GCP_REGION: us-south1
+  CLOUD_RUN_SERVICE: prissma-server
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Grant execute permission for mvnw
+        run: chmod +x mvnw
+
+      - name: Run tests
+        run: ./mvnw -B clean test
+
+      # Configure este secret em:
+      # GitHub -> Settings -> Secrets and variables -> Actions
+      # Nome: GCP_SA_KEY
+      # Valor: JSON da service account usada para fazer deploy no Cloud Run.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Deploy source to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          region: ${{ env.GCP_REGION }}
+          service: ${{ env.CLOUD_RUN_SERVICE }}
+          source: .
+          env_vars_update_strategy: merge
+
+      - name: Show deployed URL
+        run: |
+          echo "Cloud Run URL: ${{ steps.deploy.outputs.url }}"

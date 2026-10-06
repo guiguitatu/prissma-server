@@ -7,7 +7,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Import(TestcontainersConfig.class)
+@Import(EmbeddedPostgresConfig.class)
 class PrissmaServerApplicationTests {
 
 	@Test

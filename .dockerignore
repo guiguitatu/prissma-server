@@ -2,3 +2,7 @@ target/
 .git/
 .idea/
 *.iml
+# Segredos: nao devem entrar nem na camada intermediaria do build multi-stage.
+# O runtime real dos segredos e o env_file do docker-compose, nao o COPY . .
+.env
+.env.local

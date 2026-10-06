@@ -1,0 +1,84 @@
+### Variables (ajuste conforme seu ambiente)
+@host = http://localhost:8080
+@notificationId = 1
+
+### JWT
+## NÃO COMMITAR TOKENS REAIS no repositório. Cole aqui apenas um token de teste.
+@JWT_TOKEN = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzOCIsImVtYWlsIjoiam9hb0BleGFtcGxlLmNvbSIsInJvbGUiOiJFTkciLCJpYXQiOjE3Nzk2NzgyODIsImV4cCI6MTc3OTc2NDY4Mn0.dKZj368KBF9rESmlgGGlkgg0IjLZUvK2LjcgBW9gszY
+
+### ============================================================
+### LEITURA — notificações embutidas em /users/me
+### ============================================================
+
+### 1. GET /users/me — traz o array "notifications" (só para o próprio usuário)
+GET {{host}}/users/me
+Authorization: Bearer {{JWT_TOKEN}}
+
+### 2. Comparação: GET /users/{id} — "notifications" sempre vazio aqui
+GET {{host}}/users/3
+Authorization: Bearer {{JWT_TOKEN}}
+
+### ============================================================
+### ESCRITA — marcar como lida
+### ============================================================
+
+### 3. Marcar UMA notificação como lida (idempotente: chamar de novo não quebra)
+PATCH {{host}}/users/me/notifications/{{notificationId}}/read
+Authorization: Bearer {{JWT_TOKEN}}
+
+### 4. Conferir que "read" virou true (repita o GET /users/me)
+GET {{host}}/users/me
+Authorization: Bearer {{JWT_TOKEN}}
+
+### ============================================================
+### EXEMPLOS DE ERRO
+### ============================================================
+
+### 5. Erro: marcar como lida uma notificação inexistente -> 404
+PATCH {{host}}/users/me/notifications/999999/read
+Authorization: Bearer {{JWT_TOKEN}}
+
+### 6. Erro: marcar como lida uma notificação de OUTRO usuário -> 404
+### (a busca é escopada por notificationId + userId; não existe 403 aqui de
+###  propósito, pra não confirmar pra quem tenta que o id existe)
+PATCH {{host}}/users/me /notifications/1/read
+Authorization: Bearer {{JWT_TOKEN}}
+
+### 7. Erro: sem token -> 401
+PATCH {{host}}/users/me/notifications/{{notificationId}}/read
+
+### ============================================================
+### GATILHOS — como gerar uma notificação de verdade pra testar
+### ============================================================
+
+### 8a. Atribuir uma tarefa a um usuário -> ele recebe TASK_ASSIGNED
+### (ajuste stageId e assigneeUserId; veja tasks.http para o fluxo completo)
+PATCH {{host}}/stages/3/tasks/1
+Content-Type: application/json
+Authorization: Bearer {{JWT_TOKEN}}
+
+{
+  "assigneeUserId": 38
+}
+
+### 8b. Aceitar um convite de workspace -> quem convidou recebe INVITE_ACCEPTED
+### (o token de convite vem do e-mail/endpoint de criação do convite; veja o
+###  fluxo de workspaces para gerar um token válido antes de chamar isto)
+POST {{host}}/workspaces/invites/accept
+Content-Type: application/json
+
+{
+  "token": "COLE_O_TOKEN_DO_CONVITE_AQUI"
+}
+
+### 8c. Criar uma entrada no diário de obra -> membros ativos (menos o autor)
+### recebem DIARY_ENTRY_CREATED (veja diario.http para o payload completo)
+POST {{host}}/projects/6/diary-entries
+Content-Type: application/json
+Authorization: Bearer {{JWT_TOKEN}}
+
+{
+  "entryDate": "2026-06-10",
+  "notes": "Concretagem da fundação concluída sem intercorrências."
+}
+

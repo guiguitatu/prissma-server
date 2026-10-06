@@ -2,6 +2,7 @@ package br.pucpr.prissma_server.diary;
 
 import br.pucpr.prissma_server.attachments.Attachment;
 import br.pucpr.prissma_server.attachments.AttachmentRepository;
+import br.pucpr.prissma_server.notifications.NotificationService;
 import br.pucpr.prissma_server.projects.ConstructionProject;
 import br.pucpr.prissma_server.projects.ConstructionProjectMember;
 import br.pucpr.prissma_server.projects.ConstructionProjectMemberRepository;
@@ -56,6 +57,14 @@ class DiaryServiceTest {
 
     @Mock
     private ProjectPermissionService permissionService;
+
+    // O DiaryService notifica os demais membros do projeto ao criar/editar uma
+    // entrada. Sem este mock o @InjectMocks injeta null nesse parametro do
+    // construtor (o Mockito nao falha, so deixa o buraco) e o teste quebra com
+    // NullPointerException no meio da regra de negocio, escondendo o que estava
+    // sendo testado de verdade.
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private DiaryService service;

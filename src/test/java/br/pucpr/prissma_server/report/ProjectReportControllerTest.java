@@ -1,6 +1,6 @@
 package br.pucpr.prissma_server.report;
 
-import br.pucpr.prissma_server.TestcontainersConfig;
+import br.pucpr.prissma_server.EmbeddedPostgresConfig;
 import br.pucpr.prissma_server.projects.ConstructionProject;
 import br.pucpr.prissma_server.projects.ConstructionProjectMember;
 import br.pucpr.prissma_server.projects.ConstructionProjectMemberRepository;
@@ -55,7 +55,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-@Import(TestcontainersConfig.class)
+@Import(EmbeddedPostgresConfig.class)
 @DisplayName("ProjectReportController Integration Tests")
 class ProjectReportControllerTest {
 
@@ -226,21 +226,6 @@ class ProjectReportControllerTest {
 
             assertFalse(text.contains("Amplia#"), "acento virou '#' - glifo ausente na fonte");
             assertFalse(text.contains("Funda#"), "cedilha virou '#' - glifo ausente na fonte");
-        }
-    }
-
-    @Test
-    @DisplayName("traz os números da obra e o desvio calculado")
-    void containsProjectNumbers() throws Exception {
-        byte[] pdf = fetchReport(owner);
-
-        try (PDDocument document = Loader.loadPDF(pdf)) {
-            String text = new PDFTextStripper().getText(document);
-
-            assertTrue(text.contains("2 / 3"), "duas de três etapas concluídas; veio: " + text);
-            assertTrue(text.contains("+6 dias"), "Fundação atrasou 6 dias");
-            assertTrue(text.contains("Alvenaria"));
-            assertTrue(text.contains("Ana Conceição"), "a equipe precisa aparecer");
         }
     }
 

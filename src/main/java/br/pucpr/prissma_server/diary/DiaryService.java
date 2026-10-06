@@ -2,6 +2,8 @@ package br.pucpr.prissma_server.diary;
 
 import br.pucpr.prissma_server.attachments.Attachment;
 import br.pucpr.prissma_server.attachments.AttachmentRepository;
+import br.pucpr.prissma_server.notifications.NotificationService;
+import br.pucpr.prissma_server.notifications.NotificationType;
 import br.pucpr.prissma_server.projects.ConstructionProject;
 import br.pucpr.prissma_server.projects.ConstructionProjectMember;
 import br.pucpr.prissma_server.projects.ConstructionProjectMemberRepository;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
+import java.util.List;
 
 @Service
 public class DiaryService {
@@ -31,19 +34,22 @@ public class DiaryService {
     private final AttachmentRepository attachmentRepository;
     private final UserRepository userRepository;
     private final ProjectPermissionService permissionService;
+    private final NotificationService notificationService;
 
     public DiaryService(DiaryEntryRepository diaryRepository,
                         ConstructionProjectRepository projectRepository,
                         ConstructionProjectMemberRepository memberRepository,
                         AttachmentRepository attachmentRepository,
                         UserRepository userRepository,
-                        ProjectPermissionService permissionService) {
+                        ProjectPermissionService permissionService,
+                        NotificationService notificationService) {
         this.diaryRepository = diaryRepository;
         this.projectRepository = projectRepository;
         this.memberRepository = memberRepository;
         this.attachmentRepository = attachmentRepository;
         this.userRepository = userRepository;
         this.permissionService = permissionService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -73,7 +79,11 @@ public class DiaryService {
         entry.setCreatedAt(now);
         entry.setUpdatedAt(now);
 
-        return DiaryEntryResponse.from(diaryRepository.save(entry));
+        DiaryEntryResponse response = DiaryEntryResponse.from(diaryRepository.save(entry));
+
+        notifyProjectMembers(project, responsible, userId);
+
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -96,6 +106,22 @@ public class DiaryService {
     private ConstructionProject requireProject(Long projectId) {
         return projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+    }
+
+    private void notifyProjectMembers(ConstructionProject project, User responsible, Long actorUserId) {
+        List<Long> memberIds = memberRepository
+                .findAllByConstructionProjectIdOrderByJoinedAtAscIdAsc(project.getId()).stream()
+                .filter(m -> "ACTIVE".equals(m.getMembershipStatus()))
+                .map(m -> m.getUser().getId())
+                .toList();
+
+        notificationService.notifyUsersExcept(
+                memberIds,
+                actorUserId,
+                NotificationType.DIARY_ENTRY_CREATED,
+                "Nova entrada no diário de obra",
+                responsible.getName() + " registrou uma entrada no diário da obra \""
+                        + project.getTitle() + "\".");
     }
 
     private DiaryEntry requireEntryScopedToProject(Long projectId, Long entryId) {
