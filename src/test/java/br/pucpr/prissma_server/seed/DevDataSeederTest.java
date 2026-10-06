@@ -1,5 +1,6 @@
 package br.pucpr.prissma_server.seed;
 
+import br.pucpr.prissma_server.EmbeddedPostgresConfig;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -7,9 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,7 +15,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -39,24 +36,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles({"test", "seed"})
-@Import(DevDataSeederTest.SeedPostgres.class)
+@Import(EmbeddedPostgresConfig.class)
 @DisplayName("DevDataSeeder")
 class DevDataSeederTest {
-
-    @TestConfiguration(proxyBeanMethods = false)
-    static class SeedPostgres {
-        private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
-
-        static {
-            POSTGRES.start();
-        }
-
-        @Bean
-        @ServiceConnection
-        PostgreSQLContainer<?> seedPostgresContainer() {
-            return POSTGRES;
-        }
-    }
 
     private static final Path STORAGE_ROOT;
 
