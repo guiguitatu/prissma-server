@@ -12,7 +12,8 @@ env:
   CLOUD_RUN_SERVICE: prissma-server
 
 jobs:
-  test-and-deploy:
+  ci:
+    name: Build and test
     runs-on: ubuntu-latest
 
     permissions:
@@ -27,7 +28,7 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: 'maven'
+          cache: maven
 
       - name: Grant execute permission for mvnw
         run: chmod +x mvnw
@@ -35,10 +36,18 @@ jobs:
       - name: Run tests
         run: ./mvnw -B clean test
 
-      # Configure este secret em:
-      # GitHub -> Settings -> Secrets and variables -> Actions
-      # Nome: GCP_SA_KEY
-      # Valor: JSON da service account usada para fazer deploy no Cloud Run.
+  cd:
+    name: Deploy to Cloud Run
+    needs: ci
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
