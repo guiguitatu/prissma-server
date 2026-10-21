@@ -16,6 +16,8 @@ jobs:
 
     permissions:
       contents: read
+      issues: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -33,6 +35,58 @@ jobs:
 
       - name: Run tests and generate coverage report
         run: ./mvnw -B clean verify
+
+      - name: Calculate coverage
+        id: coverage
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import xml.etree.ElementTree as ET
+
+          report = ET.parse("target/site/jacoco/jacoco.xml").getroot()
+          line = next(counter for counter in report.findall("counter")
+                      if counter.attrib["type"] == "LINE")
+          missed = int(line.attrib["missed"])
+          covered = int(line.attrib["covered"])
+          total = missed + covered
+          print(f"percentage={covered * 100 / total:.2f}")
+          print(f"covered={covered}")
+          print(f"total={total}")
+          PY
+
+      - name: Publish coverage summary
+        env:
+          COVERAGE: ${{ steps.coverage.outputs.percentage }}
+          COVERED_LINES: ${{ steps.coverage.outputs.covered }}
+          TOTAL_LINES: ${{ steps.coverage.outputs.total }}
+        run: |
+          {
+            echo "## Cobertura de testes"
+            echo
+            echo "**${COVERAGE}%** de linhas cobertas (${COVERED_LINES}/${TOTAL_LINES})."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment coverage on pull request
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          COVERAGE: ${{ steps.coverage.outputs.percentage }}
+          COVERED_LINES: ${{ steps.coverage.outputs.covered }}
+          TOTAL_LINES: ${{ steps.coverage.outputs.total }}
+        with:
+          script: |
+            const marker = '<!-- jacoco-coverage -->';
+            const body = `${marker}\n## Cobertura de testes\n\n**${process.env.COVERAGE}%** de linhas cobertas (${process.env.COVERED_LINES}/${process.env.TOTAL_LINES}).`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number
+            });
+            const previous = comments.find(comment => comment.user.type === 'Bot' && comment.body.includes(marker));
+            if (previous) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: previous.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
 
       - name: Upload JaCoCo coverage report
         uses: actions/upload-artifact@v4
