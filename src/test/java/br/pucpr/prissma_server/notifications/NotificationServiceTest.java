@@ -61,7 +61,7 @@ class NotificationServiceTest {
         when(repository.findByIdAndUserId(8L, 4L)).thenReturn(Optional.of(notification));
 
         assertEquals(1, service.listForUser(4L).size());
-        assertTrue(service.markAsRead(8L, 4L).isRead());
+        assertTrue(service.markAsRead(8L, 4L).read());
         service.markAsRead(8L, 4L);
         verify(repository, times(1)).save(notification);
 
