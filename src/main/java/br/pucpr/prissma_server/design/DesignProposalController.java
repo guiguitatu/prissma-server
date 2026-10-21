@@ -1,6 +1,14 @@
 package br.pucpr.prissma_server.design;
 
 import br.pucpr.prissma_server.genai.EnvironmentPreviewRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
@@ -26,6 +34,8 @@ import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/projects/{projectId}/proposals")
+@Tag(name = "Design Proposals", description = "Design proposals, versions, approval status and AI-generated previews.")
+@SecurityRequirement(name = "bearerAuth")
 public class DesignProposalController {
 
     private final DesignProposalService service;
@@ -53,6 +63,16 @@ public class DesignProposalController {
      * nascer só com título e ambiente e receber a imagem pela prévia da IA.
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Create a design proposal",
+            description = "Creates a design proposal. The proposal metadata is multipart JSON and the initial image file is optional.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Design proposal created"),
+            @ApiResponse(responseCode = "400", description = "Invalid proposal data or file"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User is not allowed to create proposals for the project"),
+            @ApiResponse(responseCode = "404", description = "Project not found"),
+            @ApiResponse(responseCode = "413", description = "Uploaded file exceeds the configured limit")
+    })
     public ResponseEntity<ProposalResponse> create(@PathVariable Long projectId,
                                                    @Valid @RequestPart("proposal") ProposalRequest request,
                                                    @RequestPart(value = "file", required = false) MultipartFile file,
@@ -63,14 +83,31 @@ public class DesignProposalController {
     }
 
     @GetMapping
+    @Operation(summary = "List design proposals", description = "Returns a paginated list of design proposals for a project.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Design proposals returned"),
+            @ApiResponse(responseCode = "400", description = "Invalid pagination parameters"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User cannot access the project"),
+            @ApiResponse(responseCode = "404", description = "Project not found")
+    })
     public ResponseEntity<ProposalPageResponse> list(@PathVariable Long projectId,
+                                                     @Parameter(description = "Zero-based page number", example = "0")
                                                      @RequestParam(required = false) Integer page,
+                                                     @Parameter(description = "Page size", example = "20")
                                                      @RequestParam(required = false) Integer size,
                                                      Authentication auth) {
         return ResponseEntity.ok(service.list(projectId, page, size, resolveUserId(auth)));
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get a design proposal", description = "Returns a design proposal with its current project-visible data.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Design proposal returned"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User cannot access the project"),
+            @ApiResponse(responseCode = "404", description = "Project or proposal not found")
+    })
     public ResponseEntity<ProposalResponse> get(@PathVariable Long projectId,
                                                 @PathVariable Long id,
                                                 Authentication auth) {
@@ -78,6 +115,14 @@ public class DesignProposalController {
     }
 
     @PatchMapping("/{id}")
+    @Operation(summary = "Update a design proposal", description = "Partially updates the proposal metadata.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Design proposal updated"),
+            @ApiResponse(responseCode = "400", description = "Invalid proposal data"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User is not allowed to update the proposal"),
+            @ApiResponse(responseCode = "404", description = "Project or proposal not found")
+    })
     public ResponseEntity<ProposalResponse> update(@PathVariable Long projectId,
                                                    @PathVariable Long id,
                                                    @Valid @RequestBody ProposalRequest request,
@@ -86,6 +131,13 @@ public class DesignProposalController {
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Delete a design proposal", description = "Deletes a design proposal from the project.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Design proposal deleted"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User is not allowed to delete the proposal"),
+            @ApiResponse(responseCode = "404", description = "Project or proposal not found")
+    })
     public ResponseEntity<Void> delete(@PathVariable Long projectId,
                                        @PathVariable Long id,
                                        Authentication auth) {
@@ -94,6 +146,15 @@ public class DesignProposalController {
     }
 
     @PostMapping(value = "/{id}/versions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Add a proposal version", description = "Uploads a new image version for an existing design proposal.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Proposal version created"),
+            @ApiResponse(responseCode = "400", description = "Invalid version file or description"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User is not allowed to modify the proposal"),
+            @ApiResponse(responseCode = "404", description = "Project or proposal not found"),
+            @ApiResponse(responseCode = "413", description = "Uploaded file exceeds the configured limit")
+    })
     public ResponseEntity<ProposalVersionResponse> addVersion(
             @PathVariable Long projectId,
             @PathVariable Long id,
@@ -108,6 +169,14 @@ public class DesignProposalController {
     }
 
     @PatchMapping("/{id}/versions/{versionId}/status")
+    @Operation(summary = "Change proposal version status", description = "Updates the approval/status state of a specific proposal version.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Proposal version status updated"),
+            @ApiResponse(responseCode = "400", description = "Invalid status transition or request"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User is not allowed to change the proposal status"),
+            @ApiResponse(responseCode = "404", description = "Project, proposal or version not found")
+    })
     public ResponseEntity<ProposalVersionResponse> changeStatus(
             @PathVariable Long projectId,
             @PathVariable Long id,
@@ -119,6 +188,15 @@ public class DesignProposalController {
     }
 
     @GetMapping("/{id}/versions/{versionId}/image")
+    @Operation(summary = "Get a proposal version image", description = "Returns the image associated with a proposal version for inline display.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Proposal version image returned",
+                    content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                            schema = @Schema(type = "string", format = "binary"))),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User cannot access the proposal"),
+            @ApiResponse(responseCode = "404", description = "Project, proposal, version or image not found")
+    })
     public ResponseEntity<Resource> versionImage(@PathVariable Long projectId,
                                                  @PathVariable Long id,
                                                  @PathVariable Long versionId,
@@ -146,6 +224,16 @@ public class DesignProposalController {
      * continua depois que esta requisição termina.
      */
     @PostMapping(value = "/{id}/previews", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Request an AI proposal preview",
+            description = "Queues an AI-generated preview for a proposal using a raw image, an optional floor plan and preview options.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "202", description = "Preview request accepted for processing"),
+            @ApiResponse(responseCode = "400", description = "Invalid image, floor plan or preview options"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User is not allowed to modify the proposal"),
+            @ApiResponse(responseCode = "404", description = "Project or proposal not found"),
+            @ApiResponse(responseCode = "413", description = "Uploaded image exceeds the configured limit")
+    })
     public ResponseEntity<PreviewResponse> requestPreview(
             @PathVariable Long projectId,
             @PathVariable Long id,
@@ -161,6 +249,13 @@ public class DesignProposalController {
     }
 
     @GetMapping("/{id}/previews/{previewId}")
+    @Operation(summary = "Get an AI proposal preview", description = "Returns the current state and result metadata for a previously requested AI preview.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Preview returned"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User cannot access the proposal"),
+            @ApiResponse(responseCode = "404", description = "Project, proposal or preview not found")
+    })
     public ResponseEntity<PreviewResponse> getPreview(@PathVariable Long projectId,
                                                       @PathVariable Long id,
                                                       @PathVariable Long previewId,
