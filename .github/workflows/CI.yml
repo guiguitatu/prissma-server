@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - development
+      # Temporário: mede a cobertura desta branch antes de ativar a regra mínima.
+      - test/jacoco-coverage
   pull_request:
     branches:
       - development
