@@ -10,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Arrays;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -38,7 +39,7 @@ class NotificationServiceTest {
 
     @Test
     void notifyUsersDeduplicatesRecipientsAndExcludesActor() {
-        service.notifyUsers(List.of(1L, 1L, null, 2L), NotificationType.INVITE_ACCEPTED, "t", "m");
+        service.notifyUsers(Arrays.asList(1L, 1L, null, 2L), NotificationType.INVITE_ACCEPTED, "t", "m");
         ArgumentCaptor<List<Notification>> captor = ArgumentCaptor.forClass(List.class);
         verify(repository).saveAll(captor.capture());
         assertEquals(List.of(1L, 2L), captor.getValue().stream().map(Notification::getUserId).toList());
