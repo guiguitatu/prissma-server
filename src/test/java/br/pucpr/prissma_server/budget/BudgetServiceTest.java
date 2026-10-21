@@ -70,7 +70,11 @@ class BudgetServiceTest {
     @Test
     void managesBudgetAndItemsThroughTheirLifecycle() {
         when(budgetRepository.existsByConstructionProjectId(1L)).thenReturn(false);
-        when(budgetRepository.save(any(ProjectBudget.class))).thenAnswer(i -> i.getArgument(0));
+        when(budgetRepository.save(any(ProjectBudget.class))).thenAnswer(i -> {
+            ProjectBudget saved = i.getArgument(0);
+            id(saved, 2L);
+            return saved;
+        });
         ProjectBudgetRequest budgetRequest = new ProjectBudgetRequest("Nova", new BigDecimal("1000"));
         assertEquals(new BigDecimal("1000"), service.createBudget(1L, budgetRequest, 9L).getPlannedTotal());
 
