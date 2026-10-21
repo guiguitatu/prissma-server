@@ -200,7 +200,7 @@ class TaskServiceTest {
         assertEquals(1, service.listByStage(2L, 10L).size());
         assertEquals(100L, service.get(2L, 100L, 10L).getId());
         service.delete(2L, 100L, 10L);
-        assertEquals(1, service.summarizeProject(1L, 10L).getTotalStages());
+        assertEquals(1, service.summarizeProject(1L, 10L).getTotalEtapas());
         verify(taskRepository).delete(task);
         verify(permissionService, atLeastOnce()).requirePermission(1L, 10L, ProjectPermission.VIEW_PROJECT);
     }
