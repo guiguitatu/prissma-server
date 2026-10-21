@@ -17,8 +17,11 @@ class ModelAccessorsTest {
     private static final List<String> MODELS = List.of(
             "br.pucpr.prissma_server.users.UserAddress",
             "br.pucpr.prissma_server.users.User",
+            "br.pucpr.prissma_server.auth.PasswordResetToken",
+            "br.pucpr.prissma_server.notifications.Notification",
             "br.pucpr.prissma_server.attachments.Attachment",
             "br.pucpr.prissma_server.projects.ConstructionProject",
+            "br.pucpr.prissma_server.projects.ConstructionProjectMember",
             "br.pucpr.prissma_server.stage.Stage",
             "br.pucpr.prissma_server.stage.StageRequest",
             "br.pucpr.prissma_server.stage.StageResponse",
@@ -31,7 +34,15 @@ class ModelAccessorsTest {
             "br.pucpr.prissma_server.budget.BudgetItemResponse",
             "br.pucpr.prissma_server.budget.ExpenseResponse",
             "br.pucpr.prissma_server.diary.DiaryEntry",
-            "br.pucpr.prissma_server.schedule.ScheduleAllocation"
+            "br.pucpr.prissma_server.schedule.ScheduleAllocation",
+            "br.pucpr.prissma_server.schedule.ScheduleMember",
+            "br.pucpr.prissma_server.workspaces.Workspace",
+            "br.pucpr.prissma_server.workspaces.WorkspaceMember",
+            "br.pucpr.prissma_server.workspaces.MemberInvite",
+            "br.pucpr.prissma_server.design.DesignProposal",
+            "br.pucpr.prissma_server.design.DesignSubmission",
+            "br.pucpr.prissma_server.design.DesignApproval",
+            "br.pucpr.prissma_server.design.EnvironmentPreview"
     );
 
     @Test
