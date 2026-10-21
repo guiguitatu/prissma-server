@@ -1,5 +1,11 @@
 package br.pucpr.prissma_server.diary;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,10 +18,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
 import java.net.URI;
 
 @RestController
 @RequestMapping("/projects/{projectId}/diary-entries")
+@Tag(name = "Construction Diary", description = "Daily construction diary entries associated with a project.")
+@SecurityRequirement(name = "bearerAuth")
 public class DiaryController {
 
     private final DiaryService service;
@@ -36,6 +45,14 @@ public class DiaryController {
     }
 
     @PostMapping
+    @Operation(summary = "Create a diary entry", description = "Creates a new construction diary entry for a project.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Diary entry created"),
+            @ApiResponse(responseCode = "400", description = "Invalid diary entry data"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User is not allowed to modify the project"),
+            @ApiResponse(responseCode = "404", description = "Project not found")
+    })
     public ResponseEntity<DiaryEntryResponse> create(@PathVariable Long projectId,
                                                      @Valid @RequestBody DiaryEntryRequest request,
                                                      Authentication auth) {
@@ -45,14 +62,31 @@ public class DiaryController {
     }
 
     @GetMapping
+    @Operation(summary = "List diary entries", description = "Returns a paginated list of construction diary entries for a project.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Diary entries returned"),
+            @ApiResponse(responseCode = "400", description = "Invalid pagination parameters"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User cannot access the project"),
+            @ApiResponse(responseCode = "404", description = "Project not found")
+    })
     public ResponseEntity<DiaryEntryPageResponse> list(@PathVariable Long projectId,
+                                                       @Parameter(description = "Zero-based page number", example = "0")
                                                        @RequestParam(required = false) Integer page,
+                                                       @Parameter(description = "Page size", example = "20")
                                                        @RequestParam(required = false) Integer size,
                                                        Authentication auth) {
         return ResponseEntity.ok(service.list(projectId, page, size, resolveUserId(auth)));
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Delete a diary entry", description = "Deletes a construction diary entry from the project.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Diary entry deleted"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User is not allowed to modify the project"),
+            @ApiResponse(responseCode = "404", description = "Project or diary entry not found")
+    })
     public ResponseEntity<Void> delete(@PathVariable Long projectId,
                                        @PathVariable Long id,
                                        Authentication auth) {

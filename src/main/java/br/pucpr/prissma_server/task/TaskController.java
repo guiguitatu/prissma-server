@@ -1,5 +1,10 @@
 package br.pucpr.prissma_server.task;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -10,6 +15,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/stages/{stageId}/tasks")
+@Tag(name = "Tasks", description = "Task management inside construction project stages.")
+@SecurityRequirement(name = "bearerAuth")
 public class TaskController {
 
     private final TaskService service;
@@ -30,6 +37,14 @@ public class TaskController {
     }
 
     @PostMapping
+    @Operation(summary = "Create a task", description = "Creates a task inside the selected stage.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Task created"),
+            @ApiResponse(responseCode = "400", description = "Invalid task data"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User is not allowed to modify the project"),
+            @ApiResponse(responseCode = "404", description = "Stage not found")
+    })
     public ResponseEntity<TaskResponse> create(@PathVariable Long stageId,
                                                @Valid @RequestBody TaskRequest request,
                                                Authentication auth) {
@@ -40,6 +55,13 @@ public class TaskController {
     }
 
     @GetMapping
+    @Operation(summary = "List stage tasks", description = "Returns all tasks for a stage.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Tasks returned"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User cannot access the project"),
+            @ApiResponse(responseCode = "404", description = "Stage not found")
+    })
     public ResponseEntity<List<TaskResponse>> list(@PathVariable Long stageId,
                                                    Authentication auth) {
         Long userId = resolveUserId(auth);
@@ -47,6 +69,13 @@ public class TaskController {
     }
 
     @GetMapping("/{taskId}")
+    @Operation(summary = "Get a task", description = "Returns a task from the selected stage.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Task returned"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User cannot access the project"),
+            @ApiResponse(responseCode = "404", description = "Stage or task not found")
+    })
     public ResponseEntity<TaskResponse> get(@PathVariable Long stageId,
                                             @PathVariable Long taskId,
                                             Authentication auth) {
@@ -55,6 +84,14 @@ public class TaskController {
     }
 
     @PatchMapping("/{taskId}")
+    @Operation(summary = "Update a task", description = "Partially updates a task inside the selected stage.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Task updated"),
+            @ApiResponse(responseCode = "400", description = "Invalid task data"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User is not allowed to modify the project"),
+            @ApiResponse(responseCode = "404", description = "Stage or task not found")
+    })
     public ResponseEntity<TaskResponse> update(@PathVariable Long stageId,
                                                @PathVariable Long taskId,
                                                @Valid @RequestBody TaskRequest request,
@@ -64,6 +101,13 @@ public class TaskController {
     }
 
     @DeleteMapping("/{taskId}")
+    @Operation(summary = "Delete a task", description = "Deletes a task from the selected stage.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Task deleted"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User is not allowed to modify the project"),
+            @ApiResponse(responseCode = "404", description = "Stage or task not found")
+    })
     public ResponseEntity<Void> delete(@PathVariable Long stageId,
                                        @PathVariable Long taskId,
                                        Authentication auth) {
@@ -72,5 +116,3 @@ public class TaskController {
         return ResponseEntity.noContent().build();
     }
 }
-
-

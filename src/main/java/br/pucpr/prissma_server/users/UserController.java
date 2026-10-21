@@ -6,13 +6,11 @@ import br.pucpr.prissma_server.task.TaskResponse;
 import br.pucpr.prissma_server.task.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,14 +21,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/users")
-@Tag(name = "Users", description = "Operations for user registration, lookup and account management.")
-@SecurityScheme(
-        name = "bearerAuth",
-        type = SecuritySchemeType.HTTP,
-        bearerFormat = "JWT",
-        scheme = "bearer",
-        description = "JWT access token"
-)
+@Tag(name = "Users", description = "User registration, profile, task and notification operations.")
 public class UserController {
 
     private final UserService service;
@@ -60,7 +51,7 @@ public class UserController {
     }
 
     @PostMapping
-    @Operation(summary = "Create a user", description = "Registers a new user.")
+    @Operation(summary = "Create a user", description = "Registers a new user. This endpoint is public.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "User created",
                     content = @Content(schema = @Schema(implementation = UserResponse.class))),
@@ -72,8 +63,14 @@ public class UserController {
     }
 
     @GetMapping
-    @Operation(summary = "List users", description = "Returns all users.")
-    @ApiResponse(responseCode = "200", description = "Users returned")
+    @Operation(summary = "List users",
+            description = "Returns all users. Available to ADMIN, ENG and ARQ roles.",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Users returned"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Authenticated user does not have a permitted role")
+    })
     public ResponseEntity<List<UserResponse>> getUsers() {
         List<UserResponse> users = service.getUsers().stream().map(UserResponse::from).toList();
         return ResponseEntity.ok(users);
@@ -130,9 +127,12 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get a user by ID", description = "Returns a user identified by its ID.")
+    @Operation(summary = "Get a user by ID",
+            description = "Returns a user identified by its ID.",
+            security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "User returned"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
             @ApiResponse(responseCode = "404", description = "User not found")
     })
     public ResponseEntity<UserResponse> getUserById(

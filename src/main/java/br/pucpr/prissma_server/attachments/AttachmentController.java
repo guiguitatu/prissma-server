@@ -1,5 +1,13 @@
 package br.pucpr.prissma_server.attachments;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -21,6 +29,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/projects/{projectId}/attachments")
+@Tag(name = "Attachments", description = "Project, stage and task file attachments.")
+@SecurityRequirement(name = "bearerAuth")
 public class AttachmentController {
 
     private final AttachmentService service;
@@ -30,10 +40,23 @@ public class AttachmentController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload an attachment",
+            description = "Uploads a file attached to the project itself or, when target is STAGE or TASK, to the supplied stage/task identifier.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Attachment uploaded"),
+            @ApiResponse(responseCode = "400", description = "Invalid target, missing target identifier or unsupported file"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User is not allowed to modify the project"),
+            @ApiResponse(responseCode = "404", description = "Project, stage or task not found"),
+            @ApiResponse(responseCode = "413", description = "File exceeds the configured upload limit")
+    })
     public ResponseEntity<AttachmentResponse> upload(@PathVariable Long projectId,
                                                      @RequestParam("file") MultipartFile file,
+                                                     @Parameter(description = "Attachment target", example = "PROJECT")
                                                      @RequestParam(value = "target", defaultValue = "PROJECT") AttachmentTarget target,
+                                                     @Parameter(description = "Required when target is STAGE", example = "10")
                                                      @RequestParam(value = "stageId", required = false) Long stageId,
+                                                     @Parameter(description = "Required when target is TASK", example = "25")
                                                      @RequestParam(value = "taskId", required = false) Long taskId,
                                                      Authentication auth) {
         Long userId = (Long) auth.getPrincipal();
@@ -47,6 +70,14 @@ public class AttachmentController {
     }
 
     @GetMapping
+    @Operation(summary = "List project attachments",
+            description = "Lists project attachments and optionally filters them by stage or task.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Attachments returned"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User cannot access the project"),
+            @ApiResponse(responseCode = "404", description = "Project not found")
+    })
     public ResponseEntity<List<AttachmentResponse>> list(@PathVariable Long projectId,
                                                          @RequestParam(value = "stageId", required = false) Long stageId,
                                                          @RequestParam(value = "taskId", required = false) Long taskId,
@@ -59,6 +90,15 @@ public class AttachmentController {
     }
 
     @GetMapping("/{id}/download")
+    @Operation(summary = "Download an attachment", description = "Downloads an attachment preserving its stored content type and file name.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Attachment file returned",
+                    content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                            schema = @Schema(type = "string", format = "binary"))),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User cannot access the project"),
+            @ApiResponse(responseCode = "404", description = "Project or attachment not found")
+    })
     public ResponseEntity<Resource> download(@PathVariable Long projectId,
                                              @PathVariable Long id,
                                              Authentication auth) {
@@ -80,6 +120,13 @@ public class AttachmentController {
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Delete an attachment", description = "Deletes an attachment from a project.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Attachment deleted"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User is not allowed to modify the project"),
+            @ApiResponse(responseCode = "404", description = "Project or attachment not found")
+    })
     public ResponseEntity<Void> delete(@PathVariable Long projectId,
                                        @PathVariable Long id,
                                        Authentication auth) {

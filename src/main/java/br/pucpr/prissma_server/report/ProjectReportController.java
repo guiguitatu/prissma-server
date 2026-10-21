@@ -1,5 +1,13 @@
 package br.pucpr.prissma_server.report;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -16,6 +24,8 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/projects/{projectId}/report")
+@Tag(name = "Reports", description = "Construction project report generation and export.")
+@SecurityRequirement(name = "bearerAuth")
 public class ProjectReportController {
 
     private final ProjectReportService service;
@@ -42,9 +52,22 @@ public class ProjectReportController {
      * resposta de sucesso, como em AttachmentController#download.
      */
     @GetMapping
+    @Operation(summary = "Generate project report",
+            description = "Generates a PDF report for the project. Optional from/to dates limit the report period.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "PDF report generated",
+                    content = @Content(mediaType = MediaType.APPLICATION_PDF_VALUE,
+                            schema = @Schema(type = "string", format = "binary"))),
+            @ApiResponse(responseCode = "400", description = "Invalid date range"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "User cannot access the project"),
+            @ApiResponse(responseCode = "404", description = "Project not found")
+    })
     public ResponseEntity<byte[]> generate(@PathVariable Long projectId,
+                                           @Parameter(description = "Initial report date (yyyy-MM-dd)", example = "2026-10-01")
                                            @RequestParam(required = false)
                                            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                                           @Parameter(description = "Final report date (yyyy-MM-dd)", example = "2026-10-31")
                                            @RequestParam(required = false)
                                            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
                                            Authentication auth) {
