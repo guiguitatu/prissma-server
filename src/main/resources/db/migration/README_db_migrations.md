@@ -191,6 +191,7 @@ O projeto usa **Flyway** para versionar e aplicar mudanças no banco.
 - ... (V9 a V19: permissões por papel, workspaces, convites, diário, propostas,
   agenda da equipe e notificações)
 - `V20__create_analytics_schema.sql`
+- `V21__create_user_preferences.sql`
 
 ### Schema `analytics` (data warehouse)
 
