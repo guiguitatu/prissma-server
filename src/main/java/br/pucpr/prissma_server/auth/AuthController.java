@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Auth", description = "Autenticação e recuperação de senha")
+@Tag(name = "Authentication", description = "Public authentication and password recovery operations.")
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -23,13 +23,12 @@ public class AuthController {
 
     @Operation(
             summary = "Login",
-            description = "Autentica o usuário com email e senha e retorna um JWT contendo os claims " +
-                    "de identidade (subject, email, role) e, quando aplicável, o contexto do workspace " +
-                    "(workspaceId, workspaceRole, isOwner)."
+            description = "Authenticates a user with email and password and returns a JWT containing identity claims and, when applicable, the active workspace context."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Login efetuado com sucesso, token retornado"),
-            @ApiResponse(responseCode = "401", description = "Email ou senha inválidos")
+            @ApiResponse(responseCode = "200", description = "Authentication successful and JWT returned"),
+            @ApiResponse(responseCode = "400", description = "Invalid login request"),
+            @ApiResponse(responseCode = "401", description = "Invalid email or password")
     })
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
@@ -37,12 +36,13 @@ public class AuthController {
     }
 
     @Operation(
-            summary = "Solicitar redefinição de senha",
-            description = "Gera um token de redefinição de senha com validade de 15 minutos e envia um " +
-                    "email com o link de reset. Por segurança, sempre retorna 200 mesmo se o email não " +
-                    "estiver cadastrado, para não expor quais emails existem na base."
+            summary = "Request a password reset",
+            description = "Generates a password-reset token valid for 15 minutes and sends the reset link by email. For account-enumeration protection, the endpoint returns 200 even when the email is not registered."
     )
-    @ApiResponse(responseCode = "200", description = "Requisição processada (email enviado, se existir usuário com o email informado)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Request processed; email is sent when the account exists"),
+            @ApiResponse(responseCode = "400", description = "Invalid password-reset request")
+    })
     @PostMapping("/forgot-password")
     public ResponseEntity<Void> forgotPassword(@RequestBody ForgotPasswordRequest request) {
         service.forgotPassword(request.email());
@@ -50,13 +50,12 @@ public class AuthController {
     }
 
     @Operation(
-            summary = "Redefinir senha",
-            description = "Efetiva a troca de senha a partir do token recebido por email. O token é " +
-                    "de uso único e expira 15 minutos após sua criação."
+            summary = "Reset password",
+            description = "Changes the user password using the one-time token received by email. Reset tokens expire 15 minutes after creation."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Senha redefinida com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Token inválido, expirado ou nova senha fora das regras de validação")
+            @ApiResponse(responseCode = "200", description = "Password reset successfully"),
+            @ApiResponse(responseCode = "400", description = "Token is invalid or expired, or the new password does not satisfy validation rules")
     })
     @PostMapping("/reset-password")
     public ResponseEntity<Void> resetPassword(@RequestBody ResetPasswordRequest request) {

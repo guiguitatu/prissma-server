@@ -203,6 +203,31 @@
 
 	<build>
 		<plugins>
+			<!--
+				Mede a cobertura da suite de testes. O relatorio fica em
+				target/site/jacoco/index.html e o XML em target/site/jacoco/jacoco.xml,
+				pronto para ser consumido pelo CI ou por ferramentas como SonarQube.
+			-->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.12</version>
+				<executions>
+					<execution>
+						<id>prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>jacoco-report</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
