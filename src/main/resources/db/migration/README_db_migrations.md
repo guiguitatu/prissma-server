@@ -188,6 +188,23 @@ O projeto usa **Flyway** para versionar e aplicar mudanças no banco.
 - `V7__create_user_addresses_and_split_project_address.sql`
 - `V8__add_pavimento_field_to_stages.sql`
 
+- ... (V9 a V19: permissões por papel, workspaces, convites, diário, propostas,
+  agenda da equipe e notificações)
+- `V20__create_analytics_schema.sql`
+
+### Schema `analytics` (data warehouse)
+
+A partir da `V20` o banco tem um segundo schema, `analytics`, com o data warehouse
+que alimenta o dashboard de BI. Ele é composto **só por visões materializadas**
+(uma dimensão `dim_project` e seis fatos, mais o carimbo `mv_last_refresh`), em
+modelagem dimensional *star schema*.
+
+A transformação inteira mora no `SELECT` de cada view; a carga é um *full
+refresh* (`REFRESH MATERIALIZED VIEW CONCURRENTLY`) disparado de hora em hora
+pelo `AnalyticsRefreshService`. Nada é gravado nesse schema pela aplicação — ele
+é derivado, e pode ser reconstruído a qualquer momento a partir do schema
+operacional. Cada view tem um índice único: é requisito do `CONCURRENTLY`.
+
 ### Regras para novas migrações
 - **Não edite** migrações já executadas em ambientes compartilhados.
 - Para alterar o schema, **crie uma nova migração**.

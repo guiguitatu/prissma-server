@@ -1,0 +1,835 @@
+### Obra completa para alimentar o ETL de analytics.
+###
+### Monta UMA obra com cronograma, orçamento, despesas, tarefas e equipe, com
+### números calibrados para reproduzir o dashboard da especificação:
+###   Orçamento consumido ... 68%  (R$ 142.500 de R$ 210.000)
+###   Etapas concluídas ...... 7/12 (58%)
+###   Tarefas em atraso ...... 5 de 12
+###   Desvio médio prazo ..... +3 dias (últimos 30 dias)
+###   Etapas em atraso ....... Instalações elétricas +8, Acabamento gesso +3,
+###                            Pintura externa +1
+###
+### As datas são relativas a 27/10/2026. Rodando em outra data, os KPIs de
+### janela móvel (desvio dos últimos 30 dias e dias de atraso) mudam junto.
+###
+### Ordem: usuários -> login -> obra -> equipe -> etapas -> orçamento ->
+###        itens -> despesas -> tarefas -> refresh -> dashboard.
+### Vá colando os ids retornados nas variáveis conforme avança.
+
+@host = http://localhost:8080
+
+
+### ─── 1. USUÁRIOS ───────────────────────────────────────────────────────────
+
+### 1.1 Dono da obra (rota pública)
+POST {{host}}/users
+Content-Type: application/json
+
+{
+  "name": "Ana Conceição",
+  "email": "ana.analytics@example.com",
+  "password": "Senha@123",
+  "role": "ENG"
+}
+
+###
+
+### 1.2 Engenheiro da equipe — anote o "id" do response em @engenheiroId
+POST {{host}}/users
+Content-Type: application/json
+
+{
+  "name": "Bruno Ferreira",
+  "email": "bruno.analytics@example.com",
+  "password": "Senha@123",
+  "role": "ENG"
+}
+
+###
+
+@engenheiroId = 2
+
+
+### ─── 2. LOGIN ──────────────────────────────────────────────────────────────
+
+### 2.1 O login cria o workspace primário do usuário. Copie o token.
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "ana.analytics@example.com",
+  "password": "Senha@123"
+}
+
+###
+
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiZW1haWwiOiJhbmEuYW5hbHl0aWNzQGV4YW1wbGUuY29tIiwicm9sZSI6IkVORyIsImlhdCI6MTc5MzE0NDI1NiwiZXhwIjoxNzkzMjMwNjU2LCJ3b3Jrc3BhY2VJZCI6Miwid29ya3NwYWNlUm9sZSI6Ik9XTkVSIiwiaXNPd25lciI6dHJ1ZX0.SHYP6npxDE-BR1N2pEBHIuS4DzA3YL8KKn6Ge-ozbvI
+
+
+### ─── 3. OBRA ───────────────────────────────────────────────────────────────
+
+### 3.1 Criar a obra. O criador já entra como OWNER automaticamente.
+### plannedStartDate/plannedEndDate definem a curva de orçamento previsto:
+### o planejado é distribuído linearmente nos 7 meses entre jun e dez.
+POST {{host}}/projects
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Residencial Vila Nova",
+  "cep": "80000-000",
+  "street": "Rua das Acácias",
+  "number": "742",
+  "city": "Curitiba",
+  "state": "PR",
+  "projectType": "Residencial",
+  "category": "Construção",
+  "landArea": 420.00,
+  "builtArea": 265.00,
+  "status": "IN_PROGRESS",
+  "plannedStartDate": "2026-06-01",
+  "plannedEndDate": "2026-12-31"
+}
+
+###
+
+@projectId = 1
+
+
+### ─── 4. EQUIPE ─────────────────────────────────────────────────────────────
+
+### 4.1 Segundo membro — alimenta fact_member_effort junto com a dona da obra.
+POST {{host}}/projects/{{projectId}}/members
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "userId": {{engenheiroId}},
+  "roleInProject": "ENGINEER"
+}
+
+
+### ─── 5. ETAPAS (12: 7 concluídas, 3 atrasadas, 2 futuras) ──────────────────
+
+### 5.1 Serviços preliminares — DONE, 1 dia adiantada
+POST {{host}}/projects/{{projectId}}/stages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Serviços preliminares",
+  "displayOrder": 1,
+  "status": "DONE",
+  "plannedStartDate": "2026-06-01",
+  "plannedEndDate": "2026-06-15",
+  "actualStartDate": "2026-06-01",
+  "actualEndDate": "2026-06-14"
+}
+
+###
+
+### 5.2 Fundação — DONE, 3 dias de atraso (fora da janela de 30 dias)
+POST {{host}}/projects/{{projectId}}/stages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Fundação",
+  "displayOrder": 2,
+  "status": "DONE",
+  "plannedStartDate": "2026-06-16",
+  "plannedEndDate": "2026-06-30",
+  "actualStartDate": "2026-06-16",
+  "actualEndDate": "2026-07-03"
+}
+
+###
+
+### 5.3 Estrutura — DONE
+POST {{host}}/projects/{{projectId}}/stages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Estrutura",
+  "displayOrder": 3,
+  "status": "DONE",
+  "plannedStartDate": "2026-07-01",
+  "plannedEndDate": "2026-07-20",
+  "actualStartDate": "2026-07-04",
+  "actualEndDate": "2026-07-22"
+}
+
+###
+
+### 5.4 Alvenaria — DONE, 1 dia adiantada
+POST {{host}}/projects/{{projectId}}/stages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Alvenaria",
+  "displayOrder": 4,
+  "status": "DONE",
+  "plannedStartDate": "2026-07-21",
+  "plannedEndDate": "2026-08-10",
+  "actualStartDate": "2026-07-23",
+  "actualEndDate": "2026-08-09"
+}
+
+###
+
+### 5.5 Cobertura — DONE
+POST {{host}}/projects/{{projectId}}/stages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Cobertura",
+  "displayOrder": 5,
+  "status": "DONE",
+  "plannedStartDate": "2026-08-11",
+  "plannedEndDate": "2026-08-30",
+  "actualStartDate": "2026-08-11",
+  "actualEndDate": "2026-09-02"
+}
+
+###
+
+### 5.6 Instalações hidráulicas — DONE, +2 dias DENTRO da janela de 30 dias
+POST {{host}}/projects/{{projectId}}/stages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Instalações hidráulicas",
+  "displayOrder": 6,
+  "status": "DONE",
+  "plannedStartDate": "2026-09-01",
+  "plannedEndDate": "2026-09-30",
+  "actualStartDate": "2026-09-03",
+  "actualEndDate": "2026-10-02"
+}
+
+###
+
+### 5.7 Esquadrias — DONE, +4 dias DENTRO da janela. Com a 5.6: média +3.
+POST {{host}}/projects/{{projectId}}/stages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Esquadrias",
+  "displayOrder": 7,
+  "status": "DONE",
+  "plannedStartDate": "2026-09-25",
+  "plannedEndDate": "2026-10-05",
+  "actualStartDate": "2026-09-26",
+  "actualEndDate": "2026-10-09"
+}
+
+###
+
+### 5.8 Instalações elétricas — IN_PROGRESS, +8 dias de atraso
+POST {{host}}/projects/{{projectId}}/stages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Instalações elétricas",
+  "displayOrder": 8,
+  "status": "IN_PROGRESS",
+  "plannedStartDate": "2026-09-20",
+  "plannedEndDate": "2026-10-19",
+  "actualStartDate": "2026-09-22"
+}
+
+###
+
+### 5.9 Acabamento gesso — BLOCKED ("Pausada" no dashboard), +3 dias
+POST {{host}}/projects/{{projectId}}/stages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Acabamento gesso",
+  "displayOrder": 9,
+  "status": "BLOCKED",
+  "plannedStartDate": "2026-10-01",
+  "plannedEndDate": "2026-10-24",
+  "actualStartDate": "2026-10-05"
+}
+
+###
+
+### 5.10 Pintura externa — PLANNED ("Não iniciada"), +1 dia
+POST {{host}}/projects/{{projectId}}/stages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Pintura externa",
+  "displayOrder": 10,
+  "status": "PLANNED",
+  "plannedStartDate": "2026-10-10",
+  "plannedEndDate": "2026-10-26"
+}
+
+###
+
+### 5.11 Pisos e revestimentos — PLANNED, ainda no prazo
+POST {{host}}/projects/{{projectId}}/stages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Pisos e revestimentos",
+  "displayOrder": 11,
+  "status": "PLANNED",
+  "plannedStartDate": "2026-11-01",
+  "plannedEndDate": "2026-11-20"
+}
+
+###
+
+### 5.12 Limpeza e entrega — PLANNED, ainda no prazo
+POST {{host}}/projects/{{projectId}}/stages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Limpeza e entrega",
+  "displayOrder": 12,
+  "status": "PLANNED",
+  "plannedStartDate": "2026-12-01",
+  "plannedEndDate": "2026-12-20"
+}
+
+###
+
+### 5.13 Listar as etapas e anotar os ids nas variáveis abaixo
+GET {{host}}/projects/{{projectId}}/stages
+Authorization: Bearer {{token}}
+
+###
+
+@stagePreliminares = 1
+@stageFundacao = 2
+@stageEstrutura = 3
+@stageAlvenaria = 4
+@stageCobertura = 5
+@stageEletricas = 8
+@stageGesso = 9
+@stagePintura = 10
+
+
+### ─── 6. ORÇAMENTO ──────────────────────────────────────────────────────────
+
+### 6.1 Orçamento da obra — anote o "id" em @budgetId
+POST {{host}}/projects/{{projectId}}/budget
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Orçamento executivo da Residencial Vila Nova",
+  "plannedTotal": 210000.00
+}
+
+###
+
+@budgetId = 1
+
+### 6.2 Item: Mão de obra
+POST {{host}}/budgets/{{budgetId}}/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "category": "Mão de obra",
+  "description": "Equipe própria e empreiteiros",
+  "plannedAmount": 85000.00
+}
+
+###
+
+### 6.3 Item: Materiais
+POST {{host}}/budgets/{{budgetId}}/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "category": "Materiais",
+  "description": "Cimento, aço, blocos, revestimentos",
+  "plannedAmount": 70000.00
+}
+
+###
+
+### 6.4 Item: Equipamentos
+POST {{host}}/budgets/{{budgetId}}/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "category": "Equipamentos",
+  "description": "Locação de betoneira, andaimes e compactador",
+  "plannedAmount": 30000.00
+}
+
+###
+
+### 6.5 Item: Serviços
+POST {{host}}/budgets/{{budgetId}}/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "category": "Serviços",
+  "description": "Projetos complementares e taxas",
+  "plannedAmount": 25000.00
+}
+
+###
+
+### 6.6 Listar os itens e anotar os ids
+GET {{host}}/projects/{{projectId}}/budget
+Authorization: Bearer {{token}}
+
+###
+
+@itemMaoDeObra = 1
+@itemMateriais = 2
+@itemEquipamentos = 3
+@itemServicos = 4
+
+
+### ─── 7. DESPESAS (total R$ 142.500 = 68% do previsto) ──────────────────────
+### Espalhadas de junho a outubro: é o que desenha a linha de executado.
+
+### 7.1 Mão de obra — junho
+POST {{host}}/budget-items/{{itemMaoDeObra}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Folha da equipe - junho",
+  "amount": 12000.00,
+  "supplier": "Equipe própria",
+  "spentAt": "2026-06-20",
+  "stageId": {{stageFundacao}}
+}
+
+###
+
+### 7.2 Mão de obra — julho
+POST {{host}}/budget-items/{{itemMaoDeObra}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Folha da equipe - julho",
+  "amount": 14000.00,
+  "supplier": "Equipe própria",
+  "spentAt": "2026-07-18",
+  "stageId": {{stageEstrutura}}
+}
+
+###
+
+### 7.3 Mão de obra — agosto
+POST {{host}}/budget-items/{{itemMaoDeObra}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Folha da equipe - agosto",
+  "amount": 12000.00,
+  "supplier": "Equipe própria",
+  "spentAt": "2026-08-22",
+  "stageId": {{stageAlvenaria}}
+}
+
+###
+
+### 7.4 Mão de obra — setembro
+POST {{host}}/budget-items/{{itemMaoDeObra}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Folha da equipe - setembro",
+  "amount": 10000.00,
+  "supplier": "Equipe própria",
+  "spentAt": "2026-09-19"
+}
+
+###
+
+### 7.5 Mão de obra — outubro
+POST {{host}}/budget-items/{{itemMaoDeObra}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Folha da equipe - outubro",
+  "amount": 10000.00,
+  "supplier": "Equipe própria",
+  "spentAt": "2026-10-20",
+  "stageId": {{stageEletricas}}
+}
+
+###
+
+### 7.6 Materiais — junho
+POST {{host}}/budget-items/{{itemMateriais}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Cimento e aço para fundação",
+  "amount": 18000.00,
+  "supplier": "Depósito Central",
+  "spentAt": "2026-06-10",
+  "stageId": {{stageFundacao}}
+}
+
+###
+
+### 7.7 Materiais — julho
+POST {{host}}/budget-items/{{itemMateriais}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Blocos e argamassa",
+  "amount": 14000.00,
+  "supplier": "Depósito Central",
+  "spentAt": "2026-07-12",
+  "stageId": {{stageEstrutura}}
+}
+
+###
+
+### 7.8 Materiais — agosto
+POST {{host}}/budget-items/{{itemMateriais}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Telhas e madeiramento",
+  "amount": 9000.00,
+  "supplier": "Madeireira Paraná",
+  "spentAt": "2026-08-14",
+  "stageId": {{stageCobertura}}
+}
+
+###
+
+### 7.9 Materiais — setembro
+POST {{host}}/budget-items/{{itemMateriais}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Tubulação hidráulica",
+  "amount": 7000.00,
+  "supplier": "Hidráulica Sul",
+  "spentAt": "2026-09-15"
+}
+
+###
+
+### 7.10 Materiais — outubro
+POST {{host}}/budget-items/{{itemMateriais}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Fios e eletrodutos",
+  "amount": 4000.00,
+  "supplier": "Elétrica Curitiba",
+  "spentAt": "2026-10-16",
+  "stageId": {{stageEletricas}}
+}
+
+###
+
+### 7.11 Equipamentos — julho
+POST {{host}}/budget-items/{{itemEquipamentos}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Locação de betoneira e andaimes",
+  "amount": 9500.00,
+  "supplier": "Loca Máquinas",
+  "spentAt": "2026-07-05"
+}
+
+###
+
+### 7.12 Equipamentos — setembro
+POST {{host}}/budget-items/{{itemEquipamentos}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Locação de compactador",
+  "amount": 9000.00,
+  "supplier": "Loca Máquinas",
+  "spentAt": "2026-09-08"
+}
+
+###
+
+### 7.13 Serviços — agosto
+POST {{host}}/budget-items/{{itemServicos}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Projeto elétrico complementar",
+  "amount": 6000.00,
+  "supplier": "Engenharia Alfa",
+  "spentAt": "2026-08-03"
+}
+
+###
+
+### 7.14 Serviços — outubro
+POST {{host}}/budget-items/{{itemServicos}}/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Taxas e ART",
+  "amount": 8000.00,
+  "supplier": "CREA-PR",
+  "spentAt": "2026-10-05"
+}
+
+
+### ─── 8. TAREFAS (12: 7 concluídas, 5 em atraso) ────────────────────────────
+### ATENÇÃO: o backend carimba completedAt = agora quando a tarefa nasce DONE.
+### Todas as concluídas ficam com a mesma data, e a linha "Real" do burndown cai
+### de uma vez na semana atual. Para espalhar, veja a nota no fim do arquivo.
+
+### 8.1
+POST {{host}}/stages/{{stagePreliminares}}/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Limpeza do terreno",
+  "priority": "MEDIUM",
+  "status": "DONE",
+  "plannedStartDate": "2026-06-01",
+  "plannedEndDate": "2026-06-10"
+}
+
+###
+
+### 8.2
+POST {{host}}/stages/{{stagePreliminares}}/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Locação da obra",
+  "priority": "HIGH",
+  "status": "DONE",
+  "plannedStartDate": "2026-06-08",
+  "plannedEndDate": "2026-06-14"
+}
+
+###
+
+### 8.3
+POST {{host}}/stages/{{stageFundacao}}/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Escavação das sapatas",
+  "priority": "HIGH",
+  "status": "DONE",
+  "plannedStartDate": "2026-06-16",
+  "plannedEndDate": "2026-06-25"
+}
+
+###
+
+### 8.4
+POST {{host}}/stages/{{stageFundacao}}/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Concretagem das sapatas",
+  "priority": "HIGH",
+  "status": "DONE",
+  "plannedStartDate": "2026-06-26",
+  "plannedEndDate": "2026-07-02",
+  "assigneeUserId": {{engenheiroId}}
+}
+
+###
+
+### 8.5
+POST {{host}}/stages/{{stageEstrutura}}/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Montagem de pilares",
+  "priority": "MEDIUM",
+  "status": "DONE",
+  "plannedStartDate": "2026-07-06",
+  "plannedEndDate": "2026-07-18",
+  "assigneeUserId": {{engenheiroId}}
+}
+
+###
+
+### 8.6
+POST {{host}}/stages/{{stageAlvenaria}}/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Elevação de paredes",
+  "priority": "MEDIUM",
+  "status": "DONE",
+  "plannedStartDate": "2026-07-23",
+  "plannedEndDate": "2026-08-08"
+}
+
+###
+
+### 8.7
+POST {{host}}/stages/{{stageCobertura}}/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Montagem do telhado",
+  "priority": "HIGH",
+  "status": "DONE",
+  "plannedStartDate": "2026-08-11",
+  "plannedEndDate": "2026-08-28",
+  "assigneeUserId": {{engenheiroId}}
+}
+
+###
+
+### 8.8 ATRASADA
+POST {{host}}/stages/{{stageEletricas}}/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Passagem de eletrodutos",
+  "priority": "HIGH",
+  "status": "IN_PROGRESS",
+  "plannedStartDate": "2026-09-22",
+  "plannedEndDate": "2026-10-15",
+  "assigneeUserId": {{engenheiroId}}
+}
+
+###
+
+### 8.9 ATRASADA
+POST {{host}}/stages/{{stageEletricas}}/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Fiação dos circuitos",
+  "priority": "HIGH",
+  "status": "TODO",
+  "plannedStartDate": "2026-10-05",
+  "plannedEndDate": "2026-10-20",
+  "assigneeUserId": {{engenheiroId}}
+}
+
+###
+
+### 8.10 ATRASADA
+POST {{host}}/stages/{{stageGesso}}/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Forro de gesso dos quartos",
+  "priority": "MEDIUM",
+  "status": "BLOCKED",
+  "plannedStartDate": "2026-10-05",
+  "plannedEndDate": "2026-10-22"
+}
+
+###
+
+### 8.11 ATRASADA
+POST {{host}}/stages/{{stagePintura}}/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Massa corrida externa",
+  "priority": "LOW",
+  "status": "TODO",
+  "plannedStartDate": "2026-10-12",
+  "plannedEndDate": "2026-10-25"
+}
+
+###
+
+### 8.12 ATRASADA
+POST {{host}}/stages/{{stagePintura}}/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Pintura final externa",
+  "priority": "LOW",
+  "status": "TODO",
+  "plannedStartDate": "2026-10-20",
+  "plannedEndDate": "2026-10-26"
+}
+
+
+### ─── 9. RODAR O ETL E VER O RESULTADO ──────────────────────────────────────
+
+### 9.1 Dispara a carga sem esperar o ciclo de uma hora do @Scheduled
+POST {{host}}/analytics/refresh
+Authorization: Bearer {{token}}
+
+###
+
+### 9.2 Dashboard da obra
+GET {{host}}/analytics/dashboard?projectId={{projectId}}
+Authorization: Bearer {{token}}
+
+###
+
+### 9.3 Dashboard consolidado (todas as obras do workspace)
+GET {{host}}/analytics/dashboard
+Authorization: Bearer {{token}}
+
+###
+
+### 9.4 Lista do filtro "Obra"
+GET {{host}}/analytics/projects
+Authorization: Bearer {{token}}
+
+
+### ─── NOTA: burndown realista ───────────────────────────────────────────────
+###
+### A API não aceita completedAt: o backend carimba a hora atual quando a
+### tarefa vira DONE. Para a linha "Real" do burndown virar uma curva em vez de
+### um degrau, espalhe as conclusões direto no banco e rode o refresh de novo:
+###
+###   UPDATE tasks SET completed_at = planned_end_date + INTERVAL '2 days'
+###    WHERE status = 'DONE';
+###
+### Depois: POST /analytics/refresh

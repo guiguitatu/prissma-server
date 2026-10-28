@@ -26,6 +26,12 @@ app:
         - image/webp
         - application/vnd.openxmlformats-officedocument.wordprocessingml.document
 
+analytics:
+  # Intervalo entre cargas do data warehouse analítico (o Load do ETL): 1 hora.
+  # Obra anda em dias, não em minutos — atualizar de hora em hora entrega a mesma
+  # utilidade com uma fração da carga. Baixe o valor para testar o ciclo.
+  refresh-ms: ${ANALYTICS_REFRESH_MS:3600000}
+
 database:
   # Aceita diretamente a connection string entregue pelo Neon:
   # postgresql://USUARIO:SENHA@HOST/BANCO?sslmode=require&channel_binding=require
